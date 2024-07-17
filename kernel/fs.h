@@ -13,13 +13,13 @@
 // super block describes the disk layout:
 struct superblock {
   uint magic;        // Must be FSMAGIC
-  uint size;         // Size of file system image (blocks)
-  uint nblocks;      // Number of data blocks
-  uint ninodes;      // Number of inodes.
-  uint nlog;         // Number of log blocks
-  uint logstart;     // Block number of first log block
-  uint inodestart;   // Block number of first inode block
-  uint bmapstart;    // Block number of first free map block
+  uint size;         // Size of file system image (blocks)文件系统大小，也就是一共多少块
+  uint nblocks;      // Number of data blocks数据块数量
+  uint ninodes;      // Number of inodes.i结点数量
+  uint nlog;         // Number of log blocks日志块数量
+  uint logstart;     // Block number of first log block第一个日志块块号
+  uint inodestart;   // Block number of first inode block第一个i结点所在块号
+  uint bmapstart;    // Block number of first free map block第一个位图块块号
 };
 
 #define FSMAGIC 0x10203040

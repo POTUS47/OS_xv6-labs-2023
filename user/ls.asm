@@ -23,7 +23,7 @@ fmtname(char *path)
   char *p;
 
   // Find first character after last slash.
-  for(p=path+strlen(path); p >= path && *p != '/'; p--)
+  for (p = path + strlen(path); p >= path && *p != '/'; p--) // p指向路径字符串的末尾（即空字符 \0 的位置）
   10:	00000097          	auipc	ra,0x0
   14:	32a080e7          	jalr	810(ra) # 33a <strlen>
   18:	02051793          	slli	a5,a0,0x20
@@ -36,7 +36,7 @@ fmtname(char *path)
   30:	17fd                	addi	a5,a5,-1
   32:	fe97fbe3          	bgeu	a5,s1,28 <fmtname+0x28>
     ;
-  p++;
+  p++;//p指向最后一个/后的第一个字符
   36:	00178493          	addi	s1,a5,1
 
   // Return blank-padded name.
@@ -49,7 +49,7 @@ fmtname(char *path)
   48:	00a7fa63          	bgeu	a5,a0,5c <fmtname+0x5c>
     return p;
   memmove(buf, p, strlen(p));
-  memset(buf+strlen(p), ' ', DIRSIZ-strlen(p));
+  memset(buf + strlen(p), ' ', DIRSIZ - strlen(p)); // 保证 buf的总长度为DIRSIZ，即使文件名不够长也会用空格填充
   return buf;
 }
   4c:	8526                	mv	a0,s1
@@ -71,7 +71,7 @@ fmtname(char *path)
   74:	854e                	mv	a0,s3
   76:	00000097          	auipc	ra,0x0
   7a:	43c080e7          	jalr	1084(ra) # 4b2 <memmove>
-  memset(buf+strlen(p), ' ', DIRSIZ-strlen(p));
+  memset(buf + strlen(p), ' ', DIRSIZ - strlen(p)); // 保证 buf的总长度为DIRSIZ，即使文件名不够长也会用空格填充
   7e:	8526                	mv	a0,s1
   80:	00000097          	auipc	ra,0x0
   84:	2ba080e7          	jalr	698(ra) # 33a <strlen>
@@ -106,10 +106,10 @@ ls(char *path)
   d0:	23513c23          	sd	s5,568(sp)
   d4:	1c80                	addi	s0,sp,624
   d6:	892a                	mv	s2,a0
-  char buf[512], *p;
-  int fd;
-  struct dirent de;
-  struct stat st;
+  char buf[512], *p; // 用于存储路径和文件名的缓冲区，大小为512字节
+  int fd;            // 文件描述符，用于打开和读取文件
+  struct dirent de;  // 目录项结构体，用于存储从目录中读取的每个文件或目录项的信息。
+  struct stat st;    // 文件状态结构体，用于获取文件或目录的详细信息
 
   if((fd = open(path, O_RDONLY)) < 0){
   d8:	4581                	li	a1,0
@@ -121,7 +121,7 @@ ls(char *path)
     return;
   }
 
-  if(fstat(fd, &st) < 0){
+  if(fstat(fd, &st) < 0)
   e8:	d9840593          	addi	a1,s0,-616
   ec:	00000097          	auipc	ra,0x0
   f0:	4d4080e7          	jalr	1236(ra) # 5c0 <fstat>
@@ -140,7 +140,7 @@ ls(char *path)
  108:	17c2                	slli	a5,a5,0x30
  10a:	93c1                	srli	a5,a5,0x30
  10c:	02f76663          	bltu	a4,a5,138 <ls+0x84>
-  case T_DEVICE:
+  case T_DEVICE://如果是普通文件或设备文件，就打印出它的文件名，文件类型，索引节点号和大小
   case T_FILE:
     printf("%s %d %d %l\n", fmtname(path), st.type, st.ino, st.size);
  110:	854a                	mv	a0,s2
@@ -154,8 +154,8 @@ ls(char *path)
  12c:	99850513          	addi	a0,a0,-1640 # ac0 <malloc+0x122>
  130:	00000097          	auipc	ra,0x0
  134:	7b0080e7          	jalr	1968(ra) # 8e0 <printf>
-      }
       printf("%s %d %d %d\n", fmtname(buf), st.type, st.ino, st.size);
+      //printf("%s %d %d %d\n", buf, st.type, st.ino, st.size);
     }
     break;
   }
@@ -214,7 +214,7 @@ ls(char *path)
  1c2:	dc040513          	addi	a0,s0,-576
  1c6:	00000097          	auipc	ra,0x0
  1ca:	12c080e7          	jalr	300(ra) # 2f2 <strcpy>
-    p = buf+strlen(buf);
+    p = buf+strlen(buf);//指针p移动到路径最后
  1ce:	dc040513          	addi	a0,s0,-576
  1d2:	00000097          	auipc	ra,0x0
  1d6:	168080e7          	jalr	360(ra) # 33a <strlen>
@@ -222,7 +222,7 @@ ls(char *path)
  1de:	02095913          	srli	s2,s2,0x20
  1e2:	dc040793          	addi	a5,s0,-576
  1e6:	993e                	add	s2,s2,a5
-    *p++ = '/';
+    *p++ = '/';//p当前位置写入一个/，然后p再往后移动一次（表示进入此目录）
  1e8:	00190993          	addi	s3,s2,1
  1ec:	02f00793          	li	a5,47
  1f0:	00f90023          	sb	a5,0(s2)
@@ -247,10 +247,10 @@ ls(char *path)
  220:	364080e7          	jalr	868(ra) # 580 <read>
  224:	47c1                	li	a5,16
  226:	f0f519e3          	bne	a0,a5,138 <ls+0x84>
-      if(de.inum == 0)
+      if (de.inum == 0) // 跳过空目录项（inum为0）
  22a:	db045783          	lhu	a5,-592(s0)
  22e:	d3fd                	beqz	a5,214 <ls+0x160>
-      memmove(p, de.name, DIRSIZ);
+      memmove(p, de.name, DIRSIZ); // 将目录项的名称复制到buf的末尾，并进行文件状态获取
  230:	4639                	li	a2,14
  232:	db240593          	addi	a1,s0,-590
  236:	854e                	mv	a0,s3

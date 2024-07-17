@@ -123,7 +123,7 @@ int main(int argc,char* argv[])
  102:	fe442503          	lw	a0,-28(s0)
  106:	00000097          	auipc	ra,0x0
  10a:	300080e7          	jalr	768(ra) # 406 <write>
-            exit(0);       //?????
+            exit(0);  //如果这里不写，父进程退出后，子进程会变成孤儿进程
  10e:	4501                	li	a0,0
  110:	00000097          	auipc	ra,0x0
  114:	2d6080e7          	jalr	726(ra) # 3e6 <exit>

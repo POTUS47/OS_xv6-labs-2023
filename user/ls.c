@@ -11,39 +11,40 @@ fmtname(char *path)
   char *p;
 
   // Find first character after last slash.
-  for(p=path+strlen(path); p >= path && *p != '/'; p--)
+  for (p = path + strlen(path); p >= path && *p != '/'; p--) // p指向路径字符串的末尾（即空字符 \0 的位置）
     ;
-  p++;
+  p++;//p指向最后一个/后的第一个字符
 
   // Return blank-padded name.
   if(strlen(p) >= DIRSIZ)
     return p;
   memmove(buf, p, strlen(p));
-  memset(buf+strlen(p), ' ', DIRSIZ-strlen(p));
+  memset(buf + strlen(p), ' ', DIRSIZ - strlen(p)); // 保证 buf的总长度为DIRSIZ，即使文件名不够长也会用空格填充
   return buf;
 }
 
 void
 ls(char *path)
 {
-  char buf[512], *p;
-  int fd;
-  struct dirent de;
-  struct stat st;
+  char buf[512], *p; // 用于存储路径和文件名的缓冲区，大小为512字节
+  int fd;            // 文件描述符，用于打开和读取文件
+  struct dirent de;  // 目录项结构体，用于存储从目录中读取的每个文件或目录项的信息。
+  struct stat st;    // 文件状态结构体，用于获取文件或目录的详细信息
 
   if((fd = open(path, O_RDONLY)) < 0){
     fprintf(2, "ls: cannot open %s\n", path);
     return;
   }
 
-  if(fstat(fd, &st) < 0){
+  if(fstat(fd, &st) < 0)
+  { // 由文件描述符取得文件的状态,and复制到参数st所指向的结构中
     fprintf(2, "ls: cannot stat %s\n", path);
     close(fd);
     return;
   }
 
   switch(st.type){
-  case T_DEVICE:
+  case T_DEVICE://如果是普通文件或设备文件，就打印出它的文件名，文件类型，索引节点号和大小
   case T_FILE:
     printf("%s %d %d %l\n", fmtname(path), st.type, st.ino, st.size);
     break;
@@ -54,18 +55,19 @@ ls(char *path)
       break;
     }
     strcpy(buf, path);
-    p = buf+strlen(buf);
-    *p++ = '/';
+    p = buf+strlen(buf);//指针p移动到路径最后
+    *p++ = '/';//p当前位置写入一个/，然后p再往后移动一次（表示进入此目录）
     while(read(fd, &de, sizeof(de)) == sizeof(de)){
-      if(de.inum == 0)
+      if (de.inum == 0) // 跳过空目录项（inum为0）
         continue;
-      memmove(p, de.name, DIRSIZ);
+      memmove(p, de.name, DIRSIZ); // 将目录项的名称复制到buf的末尾，并进行文件状态获取
       p[DIRSIZ] = 0;
       if(stat(buf, &st) < 0){
         printf("ls: cannot stat %s\n", buf);
         continue;
       }
       printf("%s %d %d %d\n", fmtname(buf), st.type, st.ino, st.size);
+      //printf("%s %d %d %d\n", buf, st.type, st.ino, st.size);
     }
     break;
   }
