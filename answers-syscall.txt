@@ -1,0 +1,6 @@
+答案详情请见文档
+1通过堆栈回溯可以看到，函数 `usertrap()` 调用了 `syscall()` 函数
+2在kernel/syscall.h中可以知道7代表系统调用SYS_exec
+3接着去kernel.asm文件中搜索80002050，找到使内核panic的代码正是刚刚改的num=*(int *)0;
+4查看 `scase` 寄存器，它代指内核 panic 的原因，查看文档发现13对应错误原因是Laod page fault，就是从内存地址 0 中 加载数据到寄存器 `a3` 时出错
+5因为kernel加载了一个未使用的地址 0 处的内存数据而出现（Load page fault）崩溃。

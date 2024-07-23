@@ -5,6 +5,7 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "sysinfo.h"
 
 uint64
 sys_exit(void)
@@ -90,4 +91,33 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+uint64 sys_trace(void)
+{
+  int mask;
+  argint(0, &mask);//将a0寄存器中的数据取出暂存到mask中
+  struct proc *p = myproc();
+  p->mask = mask;//当前进程的mask字段被赋值为mask
+  return 0;
+}
+
+uint64
+sys_sysinfo(void)
+{
+  struct proc *p = myproc();
+  struct sysinfo info;
+  uint64 addr;
+
+  /* get virtual address*/
+  argaddr(0, &addr);
+
+  /* get info*/
+  info.freemem = get_amount_freemem();
+  info.nproc = get_nproc();
+
+  /* Copy len bytes from src(info) to virtual address dstva(addr) in a given page table. */
+  if (copyout(p->pagetable, addr, (char *)&info, sizeof(info)) < 0)
+    return -1;
+  return 0;
 }
