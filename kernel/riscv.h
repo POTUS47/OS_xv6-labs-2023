@@ -338,15 +338,21 @@ typedef uint64 *pagetable_t; // 512 PTEs
 #define PGROUNDUP(sz)  (((sz)+PGSIZE-1) & ~(PGSIZE-1))
 #define PGROUNDDOWN(a) (((a)) & ~(PGSIZE-1))
 
-#define PTE_V (1L << 0) // valid
-#define PTE_R (1L << 1)
-#define PTE_W (1L << 2)
-#define PTE_X (1L << 3)
-#define PTE_U (1L << 4) // user can access
+#define PTE_V (1L << 0) // valid00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000001
+#define PTE_R (1L << 1) // 0000 0010
+#define PTE_W (1L << 2) // 0000 0100
+#define PTE_X (1L << 3) // 0000 1000
+#define PTE_U (1L << 4) // user can access 0001 0000
+#define PTE_A (1L << 6)
+
 
 // shift a physical address to the right place for a PTE.
+// 物理地址转页表项中虚拟地址，先右移12位去除offset位
+// 然后左移10位留出页表项中的10位flag-------》000...00PPN0000000000
 #define PA2PTE(pa) ((((uint64)pa) >> 12) << 10)
 
+// 页表项中虚拟地址转物理地址，先右移10位去除flag位
+// 然后左移12位留出全部为0的offset位
 #define PTE2PA(pte) (((pte) >> 10) << 12)
 
 #define PTE_FLAGS(pte) ((pte) & 0x3FF)

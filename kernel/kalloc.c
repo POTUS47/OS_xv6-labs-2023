@@ -30,6 +30,7 @@ kinit()
   freerange(end, (void*)PHYSTOP);
 }
 
+// 释放从 pa_start 到 pa_end 范围内的内存页面
 void
 freerange(void *pa_start, void *pa_end)
 {

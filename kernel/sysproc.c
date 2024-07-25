@@ -72,11 +72,18 @@ sys_sleep(void)
 
 #ifdef LAB_PGTBL
 int
-sys_pgaccess(void)
-{
-  // lab pgtbl: your code here.
-  return 0;
+ sys_pgaccess(void)
+ {
+   // lab pgtbl: your code here.
+  uint64 srcva, st;
+  int len;
+
+  argaddr(0, &srcva);
+  argint(1, &len);
+  argaddr(2, &st);
+  return pgaccess(srcva,len,st);
 }
+
 #endif
 
 uint64

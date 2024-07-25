@@ -281,13 +281,13 @@ freewalk(pagetable_t pagetable)
   // there are 2^9 = 512 PTEs in a page table.
   for(int i = 0; i < 512; i++){
     pte_t pte = pagetable[i];
-    if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0){
+    if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0){//如果有效且没有被设置任何权限，说明是一个中间页表
       // this PTE points to a lower-level page table.
       uint64 child = PTE2PA(pte);
-      freewalk((pagetable_t)child);
-      pagetable[i] = 0;
-    } else if(pte & PTE_V){
-      panic("freewalk: leaf");
+      freewalk((pagetable_t)child);//释放了该页表项的所有孩子页表后
+      pagetable[i] = 0;//释放该页表项
+    } else if(pte & PTE_V){//如果有效且设置了权限，说明是一个叶子页表项，该情况不应该出现
+      panic("freewalk: leaf");//在调用freewalk函数前应确保所有叶子映射已经被移除
     }
   }
   kfree((void*)pagetable);
@@ -447,5 +447,41 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
     return 0;
   } else {
     return -1;
+  }
+}
+
+
+void vmprint(pagetable_t pagetable)
+{
+  printf("page table %p\n", pagetable);
+  recurse_treepage(pagetable, 2);
+}
+
+void recurse_treepage(pagetable_t pagetable, int level)
+{
+  // there are 2^9 = 512 PTEs in a page table.
+  for (int i = 0; i < 512; i++)
+  {
+    pte_t pte = pagetable[i];
+    // if PTE_V is vaild, print infomation
+    // level == 2 => top; level == 1 => middle; level == 0 => bottom;
+    if (pte & PTE_V)
+    {
+      if(level==2){
+        printf("..");
+      }
+      else if(level==1){
+        printf(".. ..");
+      }
+      else{
+        printf(".. .. ..");
+      }
+      
+      uint64 child = PTE2PA(pte);
+      printf("%d: pte %p pa %p\n", i, pte, child);
+      // this PTE points to a lower-level page table.
+      if ((pte & (PTE_R | PTE_W | PTE_X)) == 0)
+        recurse_treepage((pagetable_t)child, level - 1);
+    }
   }
 }
