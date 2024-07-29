@@ -1,0 +1,51 @@
+1. Which registers contain arguments to functions? For example, which register holds 13 in main’s call to printf? 函数的参数存在哪
+
+在main函数的汇编代码中找到
+
+```asm6502
+24:	4635                	li	a2,13 
+26:	45b1                	li	a1,12
+```
+
+可以知道立即数13被存在寄存器a2中，12被存在寄存器a1中；函数的参数被存在a1，a2等寄存器中
+
+##### 2. Where is the call to function f in the assembly code for main? Where is the call to g? (Hint: the compiler may inline functions.) f和g的调用
+
+考虑到编译器会进行内联优化，这就意味着一些显而易见的，编译时可以计算的数据会在编译时得出结果，而不是进行函数调用。
+
+查看 main 函数可以发现，printf 中包含了一个对 f 的调用。
+
+```asm6502
+printf("%d %d\n", f(8)+1, 13);
+  24:	4635                	li	a2,13
+  26:	45b1                	li	a1,12
+```
+
+但是对应的汇编代码却是直接将 f(8)+1 替换为 12 。这就说明编译器对这个函数调用进行了优化，所以对于 main 函数的汇编代码来说，其并没有调用函数 f 和 g ，而是在运行之前由编译器对其进行了计算。所以main 的汇编代码没有调用 f 和 g 函数。编译器对其进行了优化。
+
+##### 3. At what address is the function printf located? printf函数的地址是什么
+
+![](file:///D:/大学作业/大二下/os/小学期/picture/2024-07-29-13-17-11-image.png?msec=1722230235396)
+
+地址是0x64a
+
+##### 4. What value is in the register ra just after the jalr to printf in main?
+
+auipc 将一个 20 位的立即数加上当前指令的地址，得到一个 32 位的地址，并将该地址存储到指定的寄存器中。
+
+jalr 用于实现函数调用和跳转操作,跳转到指定地址，并将下一条指令的地址（即 PC+4）保存到指定的寄存器中，以便在跳转返回时使用。
+
+```asm6502
+30:	00000097          	auipc	ra,0x0
+34:	61a080e7          	jalr	1562(ra) # 64a <printf>
+```
+
+首先ra寄存器中存入当前PC值0x30加上0x0，ra中值为0x30,PC+4=0x34
+
+`jalr 1562(ra)` 跳转到偏移地址 `printf` 处，也就是 `0x64a` 的位置。
+
+在执行完这句命令之后， 寄存器 `ra` 的值设置为 `pc + 4` ，也就是 `return address` 返回地址 `0x38`。
+
+##### 5. In the following code, what is going to be printed after 'y='? (note: the answer is not a specific value.) Why does this happen`printf("x=%d y=%d", 3);`
+
+由于函数是从指定的寄存器去找传入的参数，这里只传入了一个值，那么第二个就会是寄存器中随机的一个值，没有意义
