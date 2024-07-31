@@ -385,67 +385,133 @@ bmap(struct inode *ip, uint bn)
   uint addr, *a;
   struct buf *bp;
 
-  if(bn < NDIRECT){
-    if((addr = ip->addrs[bn]) == 0){
-      addr = balloc(ip->dev);
-      if(addr == 0)
-        return 0;
-      ip->addrs[bn] = addr;
-    }
+  // 11 direct block[0 ~ 10] => [0 ~ 10]
+  if (bn < NDIRECT)
+  {
+    // Load direct block, allocating if necessary.
+    if ((addr = ip->addrs[bn]) == 0)
+      ip->addrs[bn] = addr = balloc(ip->dev);
     return addr;
   }
   bn -= NDIRECT;
 
-  if(bn < NINDIRECT){
+  // NDIRECT == 11
+  // 1 singly direct block[11] => [0 ~ 255]
+  if (bn < NINDIRECT)
+  {
     // Load indirect block, allocating if necessary.
-    if((addr = ip->addrs[NDIRECT]) == 0){
-      addr = balloc(ip->dev);
-      if(addr == 0)
-        return 0;
-      ip->addrs[NDIRECT] = addr;
-    }
+    if ((addr = ip->addrs[NDIRECT]) == 0)
+      ip->addrs[NDIRECT] = addr = balloc(ip->dev);
+
     bp = bread(ip->dev, addr);
-    a = (uint*)bp->data;
-    if((addr = a[bn]) == 0){
-      addr = balloc(ip->dev);
-      if(addr){
-        a[bn] = addr;
-        log_write(bp);
-      }
+    a = (uint *)bp->data;
+
+    if ((addr = a[bn]) == 0)
+    {
+      a[bn] = addr = balloc(ip->dev);
+      log_write(bp);
     }
+
     brelse(bp);
     return addr;
   }
+  // go to double direct block[12]
+  bn -= NINDIRECT;
 
+  // 1 double direct block[12] => 256 * [0 ~ 255]
+  if (bn < NINDIRECT * NINDIRECT)
+  {
+    int mid_addr_num = bn / NINDIRECT; // get mid_addr_num and c-style: divide(/) to down
+    bn = bn % NINDIRECT;               // get real bn
+
+    // Load indirect block, allocating if necessary.
+    if ((addr = ip->addrs[NDIRECT + 1]) == 0)
+      ip->addrs[NDIRECT + 1] = addr = balloc(ip->dev);
+
+    // get the addr of mid_addr_num
+    bp = bread(ip->dev, addr);
+    a = (uint *)bp->data;
+    if ((addr = a[mid_addr_num]) == 0)
+    {
+      a[mid_addr_num] = addr = balloc(ip->dev);
+      log_write(bp);
+    }
+    brelse(bp);
+
+    // get the addr of real bn
+    bp = bread(ip->dev, addr);
+    a = (uint *)bp->data;
+    if ((addr = a[bn]) == 0)
+    {
+      a[bn] = addr = balloc(ip->dev);
+      log_write(bp);
+    }
+    brelse(bp);
+
+    return addr;
+  }
   panic("bmap: out of range");
 }
 
 // Truncate inode (discard contents).
 // Caller must hold ip->lock.
-void
-itrunc(struct inode *ip)
+void itrunc(struct inode *ip)
 {
-  int i, j;
+  int i, j, k;
   struct buf *bp;
-  uint *a;
+  uint *a, *botton_a;
 
-  for(i = 0; i < NDIRECT; i++){
-    if(ip->addrs[i]){
+  // 11 direct block[0 ~ 10] => [0 ~ 10]
+  for (i = 0; i < NDIRECT; i++)
+  {
+    if (ip->addrs[i])
+    {
       bfree(ip->dev, ip->addrs[i]);
       ip->addrs[i] = 0;
     }
   }
 
-  if(ip->addrs[NDIRECT]){
+  // NDIRECT == 11
+  // 1 singly direct block[11] => [0 ~ 255]
+  if (ip->addrs[NDIRECT])
+  {
     bp = bread(ip->dev, ip->addrs[NDIRECT]);
-    a = (uint*)bp->data;
-    for(j = 0; j < NINDIRECT; j++){
-      if(a[j])
+    a = (uint *)bp->data;
+    for (j = 0; j < NINDIRECT; j++)
+    {
+      if (a[j])
         bfree(ip->dev, a[j]);
     }
     brelse(bp);
     bfree(ip->dev, ip->addrs[NDIRECT]);
     ip->addrs[NDIRECT] = 0;
+  }
+
+  // 1 double direct block[12] => 256 * [0 ~ 255]
+  if (ip->addrs[NDIRECT + 1])
+  {
+    // get a of mid_addr
+    bp = bread(ip->dev, ip->addrs[NDIRECT + 1]);
+    a = (uint *)bp->data;
+    brelse(bp);
+
+    for (j = 0; j < NINDIRECT; j++)
+    {
+      // get botton_a of botton_addr
+      // exist block?
+      if (a[j])
+      {
+        bp = bread(ip->dev, a[j]);
+        botton_a = (uint *)bp->data;
+        brelse(bp);
+        // free content of botton_a
+        for (k = 0; k < NINDIRECT; k++)
+          if (botton_a[k])
+            bfree(ip->dev, botton_a[k]);
+      }
+    }
+    bfree(ip->dev, ip->addrs[NDIRECT + 1]);
+    ip->addrs[NDIRECT + 1] = 0;
   }
 
   ip->size = 0;
