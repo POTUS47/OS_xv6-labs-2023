@@ -30,9 +30,7 @@ OBJS = \
   $K/sysfile.o \
   $K/kernelvec.o \
   $K/plic.o \
-  $K/virtio_disk.o \
-	$K/linked_list.o \
-	$K/syslist.o \
+  $K/virtio_disk.o
 
 OBJS_KCSAN = \
   $K/start.o \
@@ -190,7 +188,6 @@ UPROGS=\
 	$U/_grind\
 	$U/_wc\
 	$U/_zombie\
-	$U/_linked_list_test\
 
 
 
@@ -268,13 +265,12 @@ fs.img: mkfs/mkfs README $(UEXTRA) $(UPROGS)
 
 -include kernel/*.d user/*.d
 
-clean: 
-	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
+clean:
+	rm -rf *.tex *.dvi *.idx *.aux *.log *.ind *.ilg *.dSYM *.zip \
 	*/*.o */*.d */*.asm */*.sym \
-	$U/initcode $U/initcode.out $K/kernel fs.img \
-	mkfs/mkfs .gdbinit \
-        $U/usys.S \
-	$(UPROGS) \
+	$U/initcode $U/initcode.out $U/usys.S $U/_* \
+	$K/kernel \
+	mkfs/mkfs fs.img .gdbinit __pycache__ xv6.out* \
 	ph barrier
 
 # try to generate a unique GDB port
@@ -366,7 +362,7 @@ submit-check:
 		test "$$r" = y; \
 	fi
 
-zipball: submit-check
-	git archive --format=zip --output lab.zip HEAD
+zipball: clean submit-check
+	git archive --verbose --format zip --output lab.zip HEAD
 
 .PHONY: zipball clean grade submit-check

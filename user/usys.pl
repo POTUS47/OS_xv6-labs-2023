@@ -36,7 +36,3 @@ entry("getpid");
 entry("sbrk");
 entry("sleep");
 entry("uptime");
-entry("ll_create");
-entry("ll_push");
-entry("ll_pop");
-entry("ll_destroy");
