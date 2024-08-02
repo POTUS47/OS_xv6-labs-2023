@@ -16,7 +16,7 @@ struct entry {
 struct entry *table[NBUCKET];
 int keys[NKEYS];
 int nthread = 1;
-
+pthread_mutex_t lock; // declare a lock
 
 double
 now()
@@ -39,14 +39,18 @@ insert(int key, int value, struct entry **p, struct entry *n)
 static 
 void put(int key, int value)
 {
+  pthread_mutex_lock(&lock);
   int i = key % NBUCKET;
 
+  pthread_mutex_unlock(&lock);
   // is the key already present?
   struct entry *e = 0;
   for (e = table[i]; e != 0; e = e->next) {
     if (e->key == key)
       break;
   }
+  // 如果找到了相同的键，e 将指向这个已存在的条目，否则 e 将为 NULL。
+  pthread_mutex_lock(&lock);
   if(e){
     // update the existing key.
     e->value = value;
@@ -54,12 +58,13 @@ void put(int key, int value)
     // the new is new.
     insert(key, value, &table[i], table[i]);
   }
-
+  pthread_mutex_unlock(&lock);
 }
 
 static struct entry*
 get(int key)
 {
+  //pthread_mutex_lock(&lock);
   int i = key % NBUCKET;
 
 
@@ -67,7 +72,7 @@ get(int key)
   for (e = table[i]; e != 0; e = e->next) {
     if (e->key == key) break;
   }
-
+  //pthread_mutex_unlock(&lock);
   return e;
 }
 
@@ -104,7 +109,7 @@ main(int argc, char *argv[])
   pthread_t *tha;
   void *value;
   double t1, t0;
-
+  pthread_mutex_init(&lock, NULL); // initialize the lock
 
   if (argc < 2) {
     fprintf(stderr, "Usage: %s nthreads\n", argv[0]);
@@ -121,7 +126,7 @@ main(int argc, char *argv[])
   //
   // first the puts
   //
-  t0 = now();
+  t0 = now();//获得现在的时间
   for(int i = 0; i < nthread; i++) {
     assert(pthread_create(&tha[i], NULL, put_thread, (void *) (long) i) == 0);
   }
