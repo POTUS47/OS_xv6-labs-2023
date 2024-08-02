@@ -11,7 +11,7 @@
 #define MAX_THREAD  4
 
 // 用户线程的上下文结构体
-struct tcontext
+struct utcontext
 {
   uint64 ra;
   uint64 sp;
@@ -34,7 +34,7 @@ struct tcontext
 struct thread {
   char       stack[STACK_SIZE]; /* the thread's stack */
   int        state;             /* FREE, RUNNING, RUNNABLE */
-  struct tcontext context;      /* 用户进程上下文 */
+  struct utcontext utcontext;      /* 用户进程上下文 */
 };
 struct thread all_thread[MAX_THREAD];
 struct thread *current_thread;
@@ -81,7 +81,7 @@ thread_schedule(void)
      * Invoke thread_switch to switch from t to next_thread:
      * thread_switch(??, ??);
      */
-    thread_switch((uint64)&t->context, (uint64)&current_thread->context);
+    thread_switch((uint64)&t->utcontext, (uint64)&next_thread->utcontext);
   } else
     next_thread = 0;
 }
@@ -96,8 +96,8 @@ thread_create(void (*func)())
   }
   t->state = RUNNABLE;
   // YOUR CODE HERE
-  t->context.ra = (uint64)func;                  // 设定函数返回地址
-  t->context.sp = (uint64)t->stack + STACK_SIZE; // 设定栈指针
+  t->utcontext.ra = (uint64)func;                  // 设定函数返回地址
+  t->utcontext.sp = (uint64)t->stack + STACK_SIZE; // 设定栈指针
 }
 
 void 
