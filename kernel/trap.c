@@ -77,11 +77,22 @@ usertrap(void)
     exit(-1);
 
   // give up the CPU if this is a timer interrupt.
-  if(which_dev == 2)
+  if(which_dev == 2){
+    if (p->ticks != 0 && ++p->lastTickTime == p->ticks && p->hasReturn == 1)
+    {
+      // 保存寄存器内容
+      memmove(p->laterTrapframe, p->trapframe, sizeof(struct trapframe));
+      // 更改陷阱帧中保留的程序计数器，注意一定要在保存寄存器内容后再设置epc
+      p->trapframe->epc = (uint64)p->funPath;
+      p->ticks = 0;
+      p->hasReturn = 0;
+    }
     yield();
+  }
 
   usertrapret();
 }
+
 
 //
 // return to user space
