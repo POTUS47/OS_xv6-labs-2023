@@ -94,60 +94,55 @@ e1000_init(uint32 *xregs)
 
 int e1000_transmit(struct mbuf *m)
 {
-  //
-  // Your code here.
   acquire(&e1000_lock);
-  // printf("e1000_transmit: called mbuf=%p\n",m);
-  uint32 idx = regs[E1000_TDT];
-  if (tx_ring[idx].status != E1000_TXD_STAT_DD)
+  uint32 index = regs[E1000_TDT];
+  if (!(tx_ring[index].status & E1000_TXD_STAT_DD)) // 如果用 E1000_TDT 索引到的 tx_ring 的元素的 E1000_TXD_STAT_DD 位没被设置，那么此descriptor的传输尚未结束，需要返回-1
   {
-    printf("e1000_transmit: tx queue full\n");
-    // __sync_synchronize();
     release(&e1000_lock);
     return -1;
   }
-  else
+  if (tx_mbufs[index])
   {
-    if (tx_mbufs[idx] != 0)
-    {
-      mbuffree(tx_mbufs[idx]);
-    }
-    tx_ring[idx].addr = (uint64)m->head;
-    tx_ring[idx].length = (uint16)m->len;
-    tx_ring[idx].cso = 0;
-    tx_ring[idx].css = 0;
-    tx_ring[idx].cmd = E1000_TXD_CMD_RS | E1000_TXD_CMD_EOP;
-    tx_mbufs[idx] = m;
-    regs[E1000_TDT] = (regs[E1000_TDT] + 1) % TX_RING_SIZE;
+    mbuffree(tx_mbufs[index]); // 如果 tx_mbufs[index] 不为空指针，使用 mbuffree 回收它
   }
-  // __sync_synchronize();
+
+  tx_mbufs[index] = m; // 保存指向`mbuf`的指针，以便稍后释放
+  memset(&tx_ring[index], 0, sizeof(tx_ring[index]));
+  tx_ring[index].addr = (uint64)m->head; //`m->head`指向内存中数据包的内容
+  tx_ring[index].length = m->len;        // m->len`是数据包的长度
+
+  tx_ring[index].cmd = E1000_TXD_CMD_RS | E1000_TXD_CMD_EOP; // 设置必要的cmd标志
+
+  regs[E1000_TDT] = (index + 1) % TX_RING_SIZE; // 通过将一加到`E1000_TDT`再对`TX_RING_SIZE`取模来更新环位置
   release(&e1000_lock);
   return 0;
 }
 
-extern void net_rx(struct mbuf *);
 static void
 e1000_recv(void)
 {
-  //
-  // Your code here.
-  uint32 idx = (regs[E1000_RDT] + 1) % RX_RING_SIZE;
-  struct rx_desc *dest = &rx_ring[idx];
-  while (rx_ring[idx].status & E1000_RXD_STAT_DD)
-  {
-    acquire(&e1000_lock);
-    struct mbuf *buf = rx_mbufs[idx];
-    mbufput(buf, dest->length);
-    if (!(rx_mbufs[idx] = mbufalloc(0)))
-      panic("mbuf alloc failed");
-    dest->addr = (uint64)rx_mbufs[idx]->head;
-    dest->status = 0;
-    regs[E1000_RDT] = idx;
-    // __sync_synchronize();
-    release(&e1000_lock);
-    net_rx(buf);
-    idx = (regs[E1000_RDT] + 1) % RX_RING_SIZE;
-    dest = &rx_ring[idx];
+  while (1)
+  { // 每次 recv 可能接收多个包
+
+    uint32 index = (regs[E1000_RDT] + 1) % RX_RING_SIZE;
+
+    struct rx_desc *desc = &rx_ring[index];
+    // 如果需要接收的包都已经接收完毕，则退出
+    if (!(desc->status & E1000_RXD_STAT_DD))
+    {
+      return;
+    }
+
+    rx_mbufs[index]->len = desc->length; // 将`mbuf`的`m->len`更新为描述符中报告的长度
+
+    net_rx(rx_mbufs[index]); // 使用`net_rx()`将`mbuf`传送到网络栈
+
+    // 使用`mbufalloc()`分配一个新的`mbuf`，以替换刚刚给`net_rx()`的`mbuf`。将其数据指针（`m->head`）编程到描述符中。将描述符的状态位清除为零。
+    rx_mbufs[index] = mbufalloc(0);
+    desc->addr = (uint64)rx_mbufs[index]->head;
+    desc->status = 0;
+
+    regs[E1000_RDT] = index; // 将`E1000_RDT`寄存器更新为最后处理的环描述符的索引。
   }
 }
 
