@@ -503,26 +503,3 @@ sys_pipe(void)
   }
   return 0;
 }
-
-uint64
-sys_sigalarm(void)
-{
-  int tick;
-  uint64 funPath;
-  argint(0, &tick);
-  argaddr(1, &funPath);
-  struct proc *p = myproc();
-  p->ticks = tick;
-  p->funPath = funPath;
-  p->hasReturn = 1;
-  return 0;
-}
-
-uint64
-sys_sigreturn(void)
-{
-  struct proc *p = myproc();
-  memmove(p->trapframe, p->laterTrapframe, sizeof(struct trapframe));
-  p->hasReturn = 1;
-  return 0;
-}
