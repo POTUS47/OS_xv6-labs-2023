@@ -1,12 +1,12 @@
 
 xv6 kernel is booting
 
-hart 1 starting
 hart 2 starting
+hart 1 starting
 init: starting sh
 $ sh < xargstest.sh
 $ echo DONE
 $ $ $ $ $ grep: cannot open hello
 grep: cannot open hello
 grep: cannot open hello
-$ $ DONEqemu-system-riscv64: terminating on signal 15 from pid 65906 (make)
+$ $ DONEqemu-system-riscv64: terminating on signal 15 from pid 73813 (make)
