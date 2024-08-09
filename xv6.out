@@ -9,4 +9,4 @@ $ echo DONE
 $ $ $ $ $ grep: cannot open hello
 grep: cannot open hello
 grep: cannot open hello
-$ $ DONEqemu-system-riscv64: terminating on signal 15 from pid 43939 (make)
+$ $ DONEqemu-system-riscv64: terminating on signal 15 from pid 65906 (make)
